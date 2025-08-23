@@ -5,23 +5,23 @@ x-spark-common: &spark-common
   networks:
     - sparkanos
 
-x-airflow-common: &airflow-common
-  image: apache/airflow:2.9.1
-  environment: &airflow-common-env
-    AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CORE__FERNET_KEY: ''
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-  volumes:
-    - ./dags:/opt/airflow/dags
-    - ./logs:/opt/airflow/logs
-    - ./plugins:/opt/airflow/plugins
-  user: "${AIRFLOW_UID:-50000}:0"
-  depends_on:
-    - postgres
-  networks:
-    - sparkanos
+# x-airflow-common: &airflow-common
+#   image: apache/airflow:2.9.1
+#   environment: &airflow-common-env
+#     AIRFLOW__CORE__EXECUTOR: LocalExecutor
+#     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+#     AIRFLOW__CORE__FERNET_KEY: ''
+#     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+#     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+#   volumes:
+#     - ./dags:/opt/airflow/dags
+#     - ./logs:/opt/airflow/logs
+#     - ./plugins:/opt/airflow/plugins
+#   user: "${AIRFLOW_UID:-50000}:0"
+#   depends_on:
+#     - postgres
+#   networks:
+#     - sparkanos
 
 services: 
   # ----------------
@@ -67,52 +67,52 @@ services:
       - 4040:4040 # Spark UI Jobs
       - 7077:7077 # Default port for communication
 
-  # ----------------
-  # Airflow infra
-  # ----------------
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: airflow
-    volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
-    networks:
-      - sparkanos
+#   # ----------------
+#   # Airflow infra
+#   # ----------------
+#   postgres:
+#     image: postgres:15
+#     environment:
+#       POSTGRES_USER: ${POSTGRES_USER}
+#       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+#       POSTGRES_DB: airflow
+#     volumes:
+#       - postgres-db-volume:/var/lib/postgresql/data
+#     networks:
+#       - sparkanos
 
-  airflow-webserver:
-    <<: *airflow-common
-    command: webserver
-    ports:
-      - "8080:8080"
+#   airflow-webserver:
+#     <<: *airflow-common
+#     command: webserver
+#     ports:
+#       - "8080:8080"
 
-  airflow-scheduler:
-    <<: *airflow-common
-    command: scheduler
+#   airflow-scheduler:
+#     <<: *airflow-common
+#     command: scheduler
 
-  airflow-init:
-    <<: *airflow-common
-    entrypoint: /bin/bash
-    command:
-      - -c
-      - |
-        airflow db init
-        airflow users create \
-          --username admin \
-          --password admin \
-          --firstname Admin \
-          --lastname User \
-          --role Admin \
-          --email admin@example.com
+#   airflow-init:
+#     <<: *airflow-common
+#     entrypoint: /bin/bash
+#     command:
+#       - -c
+#       - |
+#         airflow db init
+#         airflow users create \
+#           --username admin \
+#           --password admin \
+#           --firstname Admin \
+#           --lastname User \
+#           --role Admin \
+#           --email admin@example.com
 
-# ----------------
-# Networks & Volumes
-# ----------------
-networks: 
-  sparkanos: 
-    driver: bridge 
+# # ----------------
+# # Networks & Volumes
+# # ----------------
+# networks: 
+#   sparkanos: 
+#     driver: bridge 
 
-volumes: 
-  minio:
-  postgres-db-volume:
+# volumes: 
+#   minio:
+#   postgres-db-volume:
