@@ -106,13 +106,13 @@ services:
 #           --role Admin \
 #           --email admin@example.com
 
-# # ----------------
-# # Networks & Volumes
-# # ----------------
-# networks: 
-#   sparkanos: 
-#     driver: bridge 
+# ----------------
+# Networks & Volumes
+# ----------------
+networks: 
+  sparkanos: 
+    driver: bridge 
 
-# volumes: 
-#   minio:
-#   postgres-db-volume:
+volumes: 
+  minio:
+  postgres-db-volume:
