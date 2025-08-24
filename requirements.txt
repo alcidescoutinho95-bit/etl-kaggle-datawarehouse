@@ -3,3 +3,4 @@ deltalake
 jupyterlab 
 pandas
 pyspark==3.4.1
+kaggle

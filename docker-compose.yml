@@ -60,7 +60,11 @@ services:
       - ./conf/util:/util
       - ./conf/env:/env
       - ./src/Notebooks:/home/user/work
+      - ./datasets:/home/user/datasets                # <--- volume compartilhado
+      - C:/Users/alcid/Downloads/kaggle.json:/user/.kaggle/kaggle.json:ro
       # - "/c/Users/alcid/Projetos_2025/Ebook/ebook_sparkanos/src/sparkanos/datasets:/datasets"
+    environment:
+      KAGGLE_CONFIG_DIR: /user/.kaggle
     ports:
       - 8889:8888 # Jupyter
       - 8083:8080 # Spark UI

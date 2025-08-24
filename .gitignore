@@ -13,4 +13,4 @@ __pycache__/
 .idea/
 
 # Ignorar dados brutos temporários
-data/
+datasets/
