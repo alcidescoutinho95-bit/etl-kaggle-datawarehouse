@@ -4,3 +4,5 @@ jupyterlab
 pandas
 pyspark==3.4.1
 kaggle
+numpy<1.26,>=1.23]
+minio
