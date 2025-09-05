@@ -1,3 +1,4 @@
+# try:
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
@@ -6,6 +7,23 @@ import pyspark.sql.functions as f
 import requests
 import pandas as pd
 import os
+    # from kaggle.api.kaggle_api_extended import KaggleApi
+    # from minio import Minio
+# except:
+#     # isntalar bibliotecas necessárias.
+#      try:
+#         get_ipython().system('pip install kaggle minio requests pandas')
+    
+#     from pyspark import SparkConf
+#     from pyspark.sql import SparkSession
+#     from pyspark.sql import DataFrame
+#     from IPython.display import display
+#     import pyspark.sql.functions as f
+#     import requests
+#     import pandas as pd
+#     import os
+#     from kaggle.api.kaggle_api_extended import KaggleApi
+#     from minio import Minio
 # --------------------------
 # Configuração Spark
 # --------------------------

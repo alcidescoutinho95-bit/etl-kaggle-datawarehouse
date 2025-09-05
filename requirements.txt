@@ -1,8 +1,13 @@
 delta-spark==2.4.0
 deltalake
 jupyterlab 
-pandas
+# pandas
 pyspark==3.4.1
-kaggle
-numpy<1.26,>=1.23]
-minio
+# kaggle
+# numpy<1.26,>=1.23]
+# minio
+# requirements.txt
+kaggle>=1.5.0
+minio>=7.0.0
+requests>=2.28.0
+pandas>=1.5.0
