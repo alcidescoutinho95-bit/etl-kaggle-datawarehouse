@@ -1,6 +1,11 @@
-FROM jupyter/all-spark-notebook:latest
+# Dockerfile.spark-master
+FROM wlcamargo/spark-master
 
-COPY ./requirements.txt /tmp/requirements.txt
+# Copiar requirements.txt
+COPY requirements.txt /tmp/requirements.txt
 
-# Usa o pip do ambiente conda do notebook
-RUN conda run -n python3 pip install -r /tmp/requirements.txt
+# Instalar dependências Python
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Limpar arquivo temporário
+RUN rm /tmp/requirements.txt

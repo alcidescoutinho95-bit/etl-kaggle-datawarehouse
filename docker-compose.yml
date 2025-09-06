@@ -5,27 +5,29 @@ x-spark-common: &spark-common
   networks:
     - sparkanos
 
-
-
-# x-airflow-common: &airflow-common
-#   image: apache/airflow:2.9.1
-#   environment: &airflow-common-env
-#     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-#     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-#     AIRFLOW__CORE__FERNET_KEY: ''
-#     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-#     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-#   volumes:
-#     - ./dags:/opt/airflow/dags
-#     - ./logs:/opt/airflow/logs
-#     - ./plugins:/opt/airflow/plugins
-#   user: "${AIRFLOW_UID:-50000}:0"
-#   depends_on:
-#     - postgres
+# x-spark-common: &spark-common
+#   build:
+#     context: .
+#     dockerfile: Dockerfile.spark-master
 #   networks:
 #     - sparkanos
 
 services: 
+  # ----------------
+  # Postgres
+  # ----------------
+  postgres:
+    hostname: postgres
+    image: postgres:14
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: 
+      - sparkanos
+
   # ----------------
   # MinIO
   # ----------------
@@ -39,8 +41,8 @@ services:
     volumes: 
       - minio:/data 
     environment: 
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER} 
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
     command: server /data --console-address ":9001" 
     networks: 
       - sparkanos
@@ -56,15 +58,19 @@ services:
       - /bin/sh
       - -c
       - |
+        if [ -f /tmp/requirements.txt ]; then
+          echo "Instalando dependências Python..."
+          pip install --no-cache-dir -r /tmp/requirements.txt
+        fi
         /usr/local/spark/sbin/start-master.sh
         start-notebook.sh --NotebookApp.token=''
     volumes:
       - ./conf/util:/util
       - ./conf/env:/env
       - ./src/Notebooks:/home/user/work
-      - ./datasets:/home/user/datasets                # <--- volume compartilhado
-      - C:/Users/alcid/Downloads/kaggle.json:/user/.kaggle/kaggle.json:ro
-      # - "/c/Users/alcid/Projetos_2025/Ebook/ebook_sparkanos/src/sparkanos/datasets:/datasets"
+      - ./datasets:/home/user/datasets
+      - ./requirements.txt:/tmp/requirements.txt:ro
+      - C:/Users/senai/Downloads/kaggle.json:/user/.kaggle/kaggle.json:ro
     environment:
       KAGGLE_CONFIG_DIR: /user/.kaggle
     ports:
@@ -73,44 +79,61 @@ services:
       - 4040:4040 # Spark UI Jobs
       - 7077:7077 # Default port for communication
 
-#   # ----------------
-#   # Airflow infra
-#   # ----------------
-#   postgres:
-#     image: postgres:15
-#     environment:
-#       POSTGRES_USER: ${POSTGRES_USER}
-#       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-#       POSTGRES_DB: airflow
-#     volumes:
-#       - postgres-db-volume:/var/lib/postgresql/data
-#     networks:
-#       - sparkanos
+  # ----------------
+  # Airflow infra
+  # ----------------
+  redis:
+    image: redis:latest
+    networks: 
+      - sparkanos
 
-#   airflow-webserver:
-#     <<: *airflow-common
-#     command: webserver
-#     ports:
-#       - "8080:8080"
+  airflow-webserver:
+    image: apache/airflow:2.9.1
+    ports:
+      - "8081:8080"
+    command: >
+      bash -c "
+      airflow db init &&
+      airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com &&
+      airflow webserver"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
+    volumes:
+      - ./dags:/opt/airflow/dags
+    depends_on:
+      - postgres
+      - redis
+    networks: 
+      - sparkanos
 
-#   airflow-scheduler:
-#     <<: *airflow-common
-#     command: scheduler
+  # Airflow Scheduler
+  airflow-scheduler:
+    image: apache/airflow:2.9.1
+    command: scheduler
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    depends_on:
+      - airflow-webserver
+    networks: 
+      - sparkanos
 
-#   airflow-init:
-#     <<: *airflow-common
-#     entrypoint: /bin/bash
-#     command:
-#       - -c
-#       - |
-#         airflow db init
-#         airflow users create \
-#           --username admin \
-#           --password admin \
-#           --firstname Admin \
-#           --lastname User \
-#           --role Admin \
-#           --email admin@example.com
+  # Airflow Worker
+  airflow-worker:
+    image: apache/airflow:2.9.1
+    command: celery worker
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
+    depends_on:
+      - airflow-webserver
+    networks: 
+      - sparkanos
 
 # ----------------
 # Networks & Volumes
@@ -121,4 +144,5 @@ networks:
 
 volumes: 
   minio:
-  postgres-db-volume:
+  postgres_data:  # Nome corrigido - estava como postgres-db-volume
+  # postgres-db-volume:  # Se preferir usar este nome, altere também no serviço postgres
