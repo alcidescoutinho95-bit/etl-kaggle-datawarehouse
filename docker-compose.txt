@@ -73,8 +73,6 @@ services:
       - 8083:8080 # Spark UI
       - 4040:4040 # Spark UI Jobs
       - 7077:7077 # Default port for communication
-    networks: 
-      - sparkanos
 
   # ----------------
   # Airflow infra
@@ -84,7 +82,7 @@ services:
     networks: 
       - sparkanos
 
-  # Serviço para inicialização do banco - CORRIGIDO
+  # Serviço para inicialização do banco
   airflow-init:
     image: apache/airflow:2.9.1
     environment:
@@ -96,47 +94,40 @@ services:
       - ./dags:/opt/airflow/dags
       - ./airflow-logs:/opt/airflow/logs
     command: >
-      bash -c "echo 'Aguardando PostgreSQL ficar pronto...';
-      for i in {1..30}; do
-        if PGPASSWORD=airflow psql -h postgres -U airflow -d airflow -c 'SELECT 1' >/dev/null 2>&1; then
-          echo 'PostgreSQL está pronto!';
-          break;
-        fi;
-        echo 'Aguardando PostgreSQL... (tentativa '$i'/30)';
-        sleep 2;
-      done;
-
-      if ! PGPASSWORD=airflow psql -h postgres -U airflow -d airflow -c 'SELECT 1 FROM connection LIMIT 1' >/dev/null 2>&1; then
-        echo 'Inicializando banco do Airflow...';
-        airflow db migrate;
-        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com;
-        echo 'Airflow inicializado com sucesso!';
-      else
-        echo 'Banco do Airflow já está inicializado. Prosseguindo...';
-      fi"
+      bash -c "
+      echo 'Aguardando PostgreSQL ficar pronto...'
+      sleep 10
+      echo 'Recriando banco completamente...'
+      PGPASSWORD=airflow psql -h postgres -U airflow -d postgres -c 'DROP DATABASE IF EXISTS airflow;'
+      PGPASSWORD=airflow psql -h postgres -U airflow -d postgres -c 'CREATE DATABASE airflow;'
+      echo 'Inicializando Airflow...'
+      airflow db migrate
+      airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
+      echo 'Airflow inicializado com sucesso!'"
     depends_on:
       - postgres
       - redis
     networks: 
       - sparkanos
-
   airflow-webserver:
-    image: apache/airflow:2.9.1
-    ports:
-      - "8081:8080"
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-      - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
-      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow-logs:/opt/airflow/logs
-    command: webserver
-    depends_on:
-      - airflow-init  # ✅ CORRETO - só depende do init
-    networks: 
-      - sparkanos
+      image: apache/airflow:2.9.1
+      ports:
+        - "8081:8080"
+      environment:
+        - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+        - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+        - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
+        - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
+      volumes:
+        - ./dags:/opt/airflow/dags
+        - ./airflow-logs:/opt/airflow/logs
+      command: webserver
+      depends_on:
+        - airflow-init
+        - postgres
+        - redis
+      networks: 
+        - sparkanos
 
   # Airflow Scheduler
   airflow-scheduler:
@@ -148,10 +139,10 @@ services:
       - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
       - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
+      - ./dags:/opt/airflow/dags
       - ./airflow-logs:/opt/airflow/logs
     depends_on:
-      - airflow-init  # ✅ CORRETO
+      - airflow-init
     networks: 
       - sparkanos
 
@@ -165,10 +156,10 @@ services:
       - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
       - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
+      - ./dags:/opt/airflow/dags
       - ./airflow-logs:/opt/airflow/logs
     depends_on:
-      - airflow-init  # ✅ CORRETO
+      - airflow-init
     networks: 
       - sparkanos
 
